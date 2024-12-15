@@ -21,7 +21,7 @@ export async function POST(
   try {
     const { data, error } = await supabase
       .from('prayers')
-      .update({ prayer_count: supabase.raw('prayer_count + 1') })
+      .update({ prayer_count: { increment: 1 } })
       .eq('id', prayerId)
       .select()
       .single()
