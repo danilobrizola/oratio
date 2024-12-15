@@ -1,7 +1,7 @@
 {
+  "/api/user/sync/route": "app/api/user/sync/route.js",
   "/prayers/[id]/page": "app/prayers/[id]/page.js",
   "/page": "app/page.js",
-  "/api/user/sync/route": "app/api/user/sync/route.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/profile/page": "app/profile/page.js"
+  "/profile/page": "app/profile/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
 }
