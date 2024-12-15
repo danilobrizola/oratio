@@ -142,7 +142,7 @@ export default function PrayerPage() {
       } : null)
       
       toast({
-        title: "Amém! 🙏🏻",
+        title: "Amém! ",
         description: "Sua oração foi registrada.",
       })
     } catch (error) {
@@ -287,14 +287,24 @@ export default function PrayerPage() {
           {/* Cabeçalho */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              {prayer.author?.image && (
+              {prayer.is_anonymous ? (
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                  <span className="text-gray-500 text-sm">A</span>
+                </div>
+              ) : prayer.author?.image ? (
                 <div className="relative w-10 h-10 flex-shrink-0">
                   <Image
                     src={prayer.author.image}
-                    alt={`Foto de ${prayer.author.name}`}
+                    alt={prayer.author.name}
                     fill
                     className="rounded-full object-cover"
                   />
+                </div>
+              ) : (
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                  <span className="text-gray-500 text-sm">
+                    {prayer.author.name.charAt(0)}
+                  </span>
                 </div>
               )}
               <div>
@@ -366,7 +376,7 @@ export default function PrayerPage() {
             <div className="space-y-4">
               {prayer.comments?.map((comment) => (
                 <div key={comment.id} className="flex gap-3 p-4 bg-gray-50 rounded-lg">
-                  {comment.author?.image && (
+                  {comment.author?.image ? (
                     <div className="relative w-8 h-8 flex-shrink-0">
                       <Image
                         src={comment.author.image}
@@ -374,6 +384,12 @@ export default function PrayerPage() {
                         fill
                         className="rounded-full object-cover"
                       />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                      <span className="text-gray-500 text-sm">
+                        {comment.author.name === 'Anônimo' ? 'A' : comment.author.name.charAt(0)}
+                      </span>
                     </div>
                   )}
                   <div>

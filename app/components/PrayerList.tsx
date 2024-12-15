@@ -6,6 +6,8 @@ import PrayerItem from './PrayerItem'
 import PrayButton from './PrayButton'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import Image from 'next/image'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -28,7 +30,7 @@ export default function PrayerList({ prayers }: PrayerListProps) {
   const [showPrayersModal, setShowPrayersModal] = useState(false)
   const [lastPrayers, setLastPrayers] = useState<LastPrayer[]>([])
   const [currentPrayerId, setCurrentPrayerId] = useState<string | null>(null)
-  const { supabase } = useSupabaseAuth()
+  const { user, supabase } = useSupabaseAuth()
 
   // Filtra as orações não ocultas
   const visiblePrayers = useMemo(() => {
@@ -66,7 +68,35 @@ export default function PrayerList({ prayers }: PrayerListProps) {
   }
 
   if (visiblePrayers.length === 0) {
-    return <div>Nenhuma oração encontrada.</div>
+    return (
+      <div className="min-h-[400px] flex flex-col items-center justify-center text-center p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+        <div className="mb-4 p-4 bg-gray-100 rounded-full">
+          🙏
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          Nenhuma oração encontrada
+        </h3>
+        <p className="text-gray-600 mb-6 max-w-md">
+          Seja o primeiro a compartilhar um pedido de oração. 
+          Juntos, podemos criar uma comunidade forte de apoio e intercessão.
+        </p>
+        {user ? (
+          
+          <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Compartilhe um pedido de oração agora! ❤️‍🔥
+          </p>
+        </div>
+          
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Faça login para compartilhar seus pedidos de oração!
+            </p>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
