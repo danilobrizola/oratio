@@ -1,8 +1,7 @@
 {
   "/prayers/[id]/page": "app/prayers/[id]/page.js",
+  "/page": "app/page.js",
   "/api/user/sync/route": "app/api/user/sync/route.js",
-  "/profile/page": "app/profile/page.js",
-  "/api/comments/create/route": "app/api/comments/create/route.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/page": "app/page.js"
+  "/profile/page": "app/profile/page.js"
 }

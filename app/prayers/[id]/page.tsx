@@ -16,19 +16,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../components/ui/dropdown-menu'
 import PrayButton from '../../components/PrayButton'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 
 export default function PrayerPage() {
   const params = useParams()
   const { user } = useSupabaseAuth()
+  const { toast } = useToast()
   const [prayer, setPrayer] = useState<PrayerWithAuthorAndComments | null>(null)
   const [loading, setLoading] = useState(true)
   const [newComment, setNewComment] = useState('')
+  const [editingComment, setEditingComment] = useState<{ id: string, content: string } | null>(null)
   const [hasPrayed, setHasPrayed] = useState(false)
-  const { toast } = useToast()
-  const [dialogOpen, setDialogOpen] = useState(false)
   const [showPrayersModal, setShowPrayersModal] = useState(false)
   const [lastPrayers, setLastPrayers] = useState<Array<{
     id: string
@@ -197,54 +204,167 @@ export default function PrayerPage() {
     }
   }
 
-  useEffect(() => {
-    const fetchPrayer = async () => {
-      try {
-        const { data: prayer, error } = await supabase
-          .from('prayers')
-          .select(`
-            *,
-            author:users!author_id (
+  const handleEditComment = async (commentId: string, content: string) => {
+    try {
+      if (!user) {
+        throw new Error('Você precisa estar logado para editar um comentário')
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      if (!token) {
+        throw new Error('Erro de autenticação. Por favor, faça login novamente.')
+      }
+
+      const response = await fetch('/api/comments/edit', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          commentId,
+          content,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || 'Falha ao editar comentário')
+      }
+
+      // Recarregar os comentários
+      await fetchPrayer()
+      setEditingComment(null)
+      
+      toast({
+        title: "Comentário editado",
+        description: "O comentário foi atualizado com sucesso!",
+      })
+    } catch (error: any) {
+      console.error('Error editing comment:', error)
+      toast({
+        title: "Erro ao editar comentário",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      if (!user) {
+        throw new Error('Você precisa estar logado para deletar um comentário')
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      if (!token) {
+        throw new Error('Erro de autenticação. Por favor, faça login novamente.')
+      }
+
+      const response = await fetch('/api/comments/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          commentId,
+          prayerId: params.id,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || 'Falha ao deletar comentário')
+      }
+
+      // Recarregar os comentários
+      await fetchPrayer()
+      
+      toast({
+        title: "Comentário deletado",
+        description: "O comentário foi removido com sucesso!",
+      })
+    } catch (error: any) {
+      console.error('Error deleting comment:', error)
+      toast({
+        title: "Erro ao deletar comentário",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const canEditComment = (comment: any) => {
+    if (!user) return false
+    console.log('canEditComment:', {
+      commentAuthorId: comment.author_id,
+      userId: user.id,
+      isAuthor: comment.author_id === user.id
+    })
+    return comment.author_id === user.id
+  }
+
+  const canDeleteComment = (comment: any) => {
+    if (!user || !prayer) return false
+    return prayer.author_id === user.id || comment.author_id === user.id
+  }
+
+  const fetchPrayer = async () => {
+    try {
+      const { data: prayer } = await supabase
+        .from('prayers')
+        .select(`
+          *,
+          author:users!prayers_author_id_fkey (
+            id,
+            name,
+            image
+          ),
+          comments:comments (
+            id,
+            content,
+            created_at,
+            author_id,
+            author:users!comments_author_id_fkey (
               id,
               name,
-              email,
               image
-            ),
-            comments (
-              id,
-              content,
-              created_at,
-              author:users!author_id (
-                name,
-                image
-              )
             )
-          `)
-          .eq('id', params.id)
-          .single()
-
-        if (error) throw error
-
-        // Ordenar comentários do mais recente para o mais antigo
-        if (prayer.comments) {
-          prayer.comments.sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           )
-        }
+        `)
+        .eq('id', params.id)
+        .single()
 
+      console.log('Prayer data:', prayer) // Debug
+
+      if (prayer) {
         setPrayer(prayer)
-      } catch (error: any) {
-        console.error('Error fetching prayer:', error)
-        toast({
-          title: "Erro ao carregar oração",
-          description: error.message,
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
 
+        // Verificar se o usuário já orou
+        if (user) {
+          const { data: prayerCount } = await supabase
+            .from('prayer_counts')
+            .select('id')
+            .eq('prayer_id', prayer.id)
+            .eq('user_id', user.id)
+            .single()
+
+          setHasPrayed(!!prayerCount)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching prayer:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchPrayer()
   }, [params.id, supabase, toast])
 
@@ -357,40 +477,113 @@ export default function PrayerPage() {
           )}
 
           <div className="space-y-6">
-            {prayer.comments.map((comment) => (
-              <div key={comment.id} className="flex gap-4">
-                {comment.author?.image ? (
-                  <div className="relative w-10 h-10 flex-shrink-0">
-                    <Image
-                      src={comment.author.image}
-                      alt={comment.author.name}
-                      fill
-                      className="rounded-full object-cover"
-                    />
+            {prayer.comments.map((comment: any) => {
+              console.log('Rendering comment:', {
+                commentId: comment.id,
+                authorId: comment.author_id,
+                userId: user?.id,
+                canEdit: canEditComment(comment),
+                canDelete: canDeleteComment(comment)
+              })
+              
+              return (
+                <div key={comment.id} className="flex gap-4 group">
+                  {comment.author?.image ? (
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                      <Image
+                        src={comment.author.image}
+                        alt={comment.author.name}
+                        fill
+                        className="rounded-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-gray-500">
+                        {comment.author.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-baseline justify-between gap-2 mb-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-medium text-gray-900">
+                          {comment.author.name}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {formatDistanceToNow(new Date(comment.created_at), {
+                            addSuffix: true,
+                            locale: ptBR
+                          })}
+                        </span>
+                      </div>
+                      {user && (canDeleteComment(comment) || canEditComment(comment)) && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canEditComment(comment) && (
+                              <DropdownMenuItem
+                                onClick={() => setEditingComment({
+                                  id: comment.id,
+                                  content: comment.content
+                                })}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                            )}
+                            {canDeleteComment(comment) && (
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => handleDeleteComment(comment.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                    {editingComment?.id === comment.id ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editingComment.content}
+                          onChange={(e) => setEditingComment({
+                            ...editingComment,
+                            content: e.target.value
+                          })}
+                          className="min-h-[100px]"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleEditComment(comment.id, editingComment.content)}
+                            disabled={!editingComment.content.trim()}
+                          >
+                            Salvar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setEditingComment(null)}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-700">{comment.content}</p>
+                    )}
                   </div>
-                ) : (
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-gray-500">
-                      {comment.author.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-medium text-gray-900">
-                      {comment.author.name}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      {formatDistanceToNow(new Date(comment.created_at), {
-                        addSuffix: true,
-                        locale: ptBR
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-gray-700">{comment.content}</p>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>
