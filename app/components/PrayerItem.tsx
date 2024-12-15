@@ -6,6 +6,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import Image from 'next/image'
 import Link from 'next/link'
+import { formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 interface Comment {
   id: string
@@ -107,6 +109,11 @@ export default function PrayerItem({ prayer }: PrayerItemProps) {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 3)
 
+  // Formata o texto do pedido de oração para mostrar apenas as primeiras 200 caracteres
+  const truncatedContent = prayer.content.length > 200 
+    ? `${prayer.content.slice(0, 200)}...` 
+    : prayer.content
+
   return (
     <div>
       <Link href={`/prayers/${prayer.id}`}>
@@ -114,7 +121,7 @@ export default function PrayerItem({ prayer }: PrayerItemProps) {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {!prayer.is_anonymous && prayer.author.image && (
+                {!prayer.is_anonymous && prayer.author.image ? (
                   <Image
                     src={prayer.author.image}
                     alt={prayer.author.name}
@@ -122,51 +129,77 @@ export default function PrayerItem({ prayer }: PrayerItemProps) {
                     height={32}
                     className="rounded-full"
                   />
+                ) : (
+                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                    <span className="text-gray-500 text-sm">
+                      {prayer.is_anonymous ? 'A' : prayer.author.name.charAt(0)}
+                    </span>
+                  </div>
                 )}
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
                     {prayer.title}
-                    {prayer.answered && (
-                      <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
-                        Oração Respondida 🙏
-                      </span>
-                    )}
                   </CardTitle>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 flex items-center gap-1">
                     Por {prayer.is_anonymous ? 'Anônimo' : prayer.author.name}
                   </p>
                 </div>
               </div>
             </div>
           </CardHeader>
+          
           <CardContent>
-            <p className="text-gray-700 mb-4">{prayer.content}</p>
+            <p className="text-gray-700 mb-6 line-clamp-3">{truncatedContent}</p>
             
             {lastThreeComments.length > 0 && (
-              <div className="space-y-3 mt-4">
-                <h4 className="text-sm font-medium text-gray-900">Últimos comentários</h4>
-                {lastThreeComments.map((comment) => (
-                  <div key={comment.id} className="flex items-start gap-2 text-sm">
-                    {comment.author?.image && (
-                      <Image
-                        src={comment.author.image}
-                        alt={comment.author.name}
-                        width={24}
-                        height={24}
-                        className="rounded-full mt-1"
-                      />
-                    )}
-                    <div>
-                      <p className="font-medium text-gray-900">{comment.author.name}</p>
-                      <p className="text-gray-600">{comment.content}</p>
+              <div className="space-y-4 bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-900">Últimos comentários</h4>
+                  {comments.length > 3 && (
+                    <Link 
+                      href={`/prayers/${prayer.id}`}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Ver todos os {comments.length} comentários
+                    </Link>
+                  )}
+                </div>
+                
+                <div className="space-y-4">
+                  {lastThreeComments.map((comment) => (
+                    <div key={comment.id} className="flex items-start gap-3">
+                      {comment.author?.image ? (
+                        <Image
+                          src={comment.author.image}
+                          alt={comment.author.name}
+                          width={24}
+                          height={24}
+                          className="rounded-full mt-1"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center mt-1">
+                          <span className="text-gray-500 text-xs">
+                            {comment.author.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <p className="font-medium text-sm text-gray-900 truncate">
+                            {comment.author.name}
+                          </p>
+                          <span className="text-xs text-gray-500">
+                            {formatDistanceToNow(new Date(comment.created_at), {
+                              addSuffix: true,
+                              locale: ptBR
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-2">{comment.content}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {comments.length > 3 && (
-                  <p className="text-sm text-gray-500">
-                    Ver mais {comments.length - 3} comentário{comments.length - 3 !== 1 ? 's' : ''}...
-                  </p>
-                )}
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
