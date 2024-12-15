@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import PrayButton from '../../components/PrayButton'
 
 export default function PrayerPage() {
   const params = useParams()
@@ -324,17 +325,17 @@ export default function PrayerPage() {
           {/* Ações */}
           <div className="flex items-center gap-4 pt-4 border-t">
             {user && (
-              <button
-                onClick={handlePrayClick}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${
-                  hasPrayed
-                    ? 'bg-blue-100 text-blue-600'
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
-              >
-                <span>🙏</span>
-                <span>{prayer.prayer_count}</span>
-              </button>
+              <PrayButton
+                prayerId={prayer.id}
+                initialPrayerCount={prayer.prayer_count}
+                onPrayerCountChange={(newCount) => 
+                  setPrayer(prev => prev ? { ...prev, prayer_count: newCount } : null)
+                }
+                onShowLastPrayers={async () => {
+                  await fetchLastPrayers()
+                  setShowPrayersModal(true)
+                }}
+              />
             )}
             {!user && prayer.prayer_count > 0 && (
               <div className="flex items-center space-x-2 px-4 py-2">
