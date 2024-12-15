@@ -55,7 +55,6 @@ const handler = NextAuth({
           })
 
         if (upsertError) {
-          console.error('Erro ao sincronizar usuário com tabela users:', upsertError)
           return false
         }
 
@@ -64,7 +63,6 @@ const handler = NextAuth({
 
         return true
       } catch (error) {
-        console.error('Erro ao sincronizar usuário com Supabase:', error)
         return false
       }
     },
@@ -91,8 +89,6 @@ const handler = NextAuth({
             exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 hora
           }
           
-          console.log('Payload do JWT:', payload)
-          
           const access_token = jwt.sign(
             payload,
             Buffer.from(jwtSecret, 'base64'),
@@ -103,7 +99,7 @@ const handler = NextAuth({
           
           session.access_token = access_token
         } catch (error) {
-          console.error('Erro ao gerar token JWT:', error)
+          return session
         }
       }
       return session

@@ -61,13 +61,13 @@ export default function PrayerItem({ prayer }: PrayerItemProps) {
         .maybeSingle()
 
       if (error) {
-        console.error('Erro ao verificar oração:', error)
+        setHasPrayed(false)
         return
       }
 
       setHasPrayed(!!data)
     } catch (error) {
-      console.error('Erro ao verificar oração:', error)
+      setHasPrayed(false)
     }
   }
 
@@ -109,7 +109,6 @@ export default function PrayerItem({ prayer }: PrayerItemProps) {
       setHasPrayed(true)
       setToast({ message: 'Oração registrada com sucesso!', type: 'success' })
     } catch (error: any) {
-      console.error('Erro ao orar:', error)
       setToast({ message: error.message || 'Erro ao registrar oração', type: 'error' })
     }
   }
@@ -144,13 +143,15 @@ export default function PrayerItem({ prayer }: PrayerItemProps) {
         `)
         .single()
 
-      if (error) throw error
+      if (error) {
+        setHasPrayed(false)
+        return
+      }
 
       setComments(prev => [...prev, comment])
       setNewComment('')
       setToast({ message: 'Comentário adicionado com sucesso!', type: 'success' })
     } catch (error: any) {
-      console.error('Erro ao comentar:', error)
       setToast({ message: error.message || 'Erro ao adicionar comentário', type: 'error' })
     }
   }

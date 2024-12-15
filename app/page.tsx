@@ -55,7 +55,6 @@ export default function Home() {
         setPrayers(data || [])
         setTotalCount(count || 0)
       } catch (error) {
-        console.error('Erro ao carregar orações:', error)
       } finally {
         setLoading(false)
       }

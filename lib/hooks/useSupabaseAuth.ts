@@ -31,7 +31,7 @@ export function useSupabaseAuth() {
         })
 
       if (insertError) {
-        console.error('Erro ao sincronizar usuário:', insertError)
+        return
       }
     }
   }
@@ -66,7 +66,7 @@ export function useSupabaseAuth() {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
-    if (error) console.error('Erro ao fazer logout:', error)
+    if (error) return
   }
 
   return {

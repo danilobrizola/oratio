@@ -26,12 +26,15 @@ export async function POST(
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      return NextResponse.json(
+        { error: 'Failed to update pray count' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Error updating pray count:', error)
     return NextResponse.json({ error: 'Failed to update pray count' }, { status: 500 })
   }
 }
-

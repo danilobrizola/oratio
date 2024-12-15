@@ -108,7 +108,6 @@ export default function NewPrayerForm() {
         throw insertError
       }
 
-      console.log('Oração criada:', data)
       setToast({ message: 'Oração enviada com sucesso', type: 'success' })
       setTitle('')
       setContent('')
@@ -117,7 +116,6 @@ export default function NewPrayerForm() {
       router.push('/')
       
     } catch (error: any) {
-      console.error('Erro ao enviar oração:', error)
       setError(error.message)
       setToast({ 
         message: error.message === 'new row violates row-level security policy for table "prayers"'

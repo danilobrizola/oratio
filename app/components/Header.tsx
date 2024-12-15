@@ -20,7 +20,6 @@ export default function Header() {
     })
 
     if (error) {
-      console.error('Erro ao fazer login:', error)
     }
   }
 
