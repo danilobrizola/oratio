@@ -24,17 +24,36 @@ export type User = {
 export type Comment = {
   id: string
   content: string
-  author_id: string | null
-  prayer_id: string | null
   created_at: string | null
-  updated_at: string | null
+  author_id: string
   author: {
+    id: string
     name: string
     image: string
   }
 }
 
 export type PrayerWithAuthorAndComments = Prayer & {
-  author: User
-  comments: Comment[]
+  author: {
+    id: string
+    name: string
+    email: string | null
+    image: string | null
+  }
+  comments: Array<{
+    id: string
+    content: string
+    author_id: string
+    created_at: string | null
+    author: {
+      name: string
+      image: string | null
+    }
+  }>
+}
+
+export type LastPrayer = {
+  id: string
+  full_name: string
+  image: string | null
 }
