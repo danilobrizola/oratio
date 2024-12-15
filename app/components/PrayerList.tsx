@@ -1,22 +1,137 @@
 'use client'
 
+import { useState, useMemo } from 'react'
 import { PrayerWithAuthorAndComments } from '@/types/supabase'
 import PrayerItem from './PrayerItem'
+import PrayButton from './PrayButton'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
+import Image from 'next/image'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface PrayerListProps {
   prayers: PrayerWithAuthorAndComments[]
 }
 
+interface LastPrayer {
+  id: string
+  full_name: string
+  image: string | null
+}
+
 export default function PrayerList({ prayers }: PrayerListProps) {
-  if (prayers.length === 0) {
+  const [showPrayersModal, setShowPrayersModal] = useState(false)
+  const [lastPrayers, setLastPrayers] = useState<LastPrayer[]>([])
+  const [currentPrayerId, setCurrentPrayerId] = useState<string | null>(null)
+  const { supabase } = useSupabaseAuth()
+
+  // Filtra as orações não ocultas
+  const visiblePrayers = useMemo(() => {
+    return prayers.filter(prayer => !prayer.is_hidden)
+  }, [prayers])
+
+  const fetchLastPrayers = async (prayerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('prayer_counts')
+        .select(`
+          user_id,
+          users!prayer_counts_user_id_fkey (
+            id,
+            name,
+            image
+          )
+        `)
+        .eq('prayer_id', prayerId)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (error) throw error
+
+      if (data) {
+        setLastPrayers(data.map(item => ({
+          id: item.users.id,
+          full_name: item.users.name,
+          image: item.users.image
+        })))
+      }
+    } catch (error) {
+      console.error('Erro ao buscar últimas orações:', error)
+    }
+  }
+
+  if (visiblePrayers.length === 0) {
     return <div>Nenhuma oração encontrada.</div>
   }
 
   return (
-    <div className="space-y-6">
-      {prayers.map((prayer) => (
-        <PrayerItem key={prayer.id} prayer={prayer} />
-      ))}
-    </div>
+    <>
+      <div className="space-y-6">
+        {visiblePrayers.map((prayer) => (
+          <div key={prayer.id} className="relative">
+            <PrayerItem prayer={prayer} />
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              {prayer.status === 'answered' && (
+                <div className="flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
+                  ✓ Respondida
+                </div>
+              )}
+              <div onClick={(e) => e.stopPropagation()}>
+                <PrayButton
+                  prayerId={prayer.id}
+                  initialPrayerCount={prayer.prayer_count}
+                  onPrayerCountChange={(newCount) => {
+                    // Atualizar o contador no estado local se necessário
+                  }}
+                  onShowLastPrayers={async () => {
+                    setCurrentPrayerId(prayer.id)
+                    await fetchLastPrayers(prayer.id)
+                    setShowPrayersModal(true)
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Dialog open={showPrayersModal} onOpenChange={setShowPrayersModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pessoas que oraram por este pedido</DialogTitle>
+            <DialogDescription>
+              As últimas pessoas que se juntaram em oração
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {lastPrayers.map((user) => (
+              <div key={user.id} className="flex items-center gap-3">
+                {user.image ? (
+                  <Image
+                    src={user.image}
+                    alt={user.full_name}
+                    width={40}
+                    height={40}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                    <span className="text-gray-500 text-sm">
+                      {user.full_name.charAt(0)}
+                    </span>
+                  </div>
+                )}
+                <span className="text-sm font-medium">{user.full_name}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

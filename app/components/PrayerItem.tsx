@@ -6,7 +6,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import Image from 'next/image'
 import Link from 'next/link'
-import PrayButton from './PrayButton'
 
 interface Comment {
   id: string
@@ -173,21 +172,6 @@ export default function PrayerItem({ prayer }: PrayerItemProps) {
           </CardContent>
         </Card>
       </Link>
-      
-      <div className="mt-4 flex justify-center" onClick={(e) => e.stopPropagation()}>
-        {user ? (
-          <PrayButton
-            prayerId={prayer.id}
-            initialPrayerCount={prayer.prayer_count}
-            onPrayerCountChange={(newCount) => setPrayCount(newCount)}
-          />
-        ) : (
-          <div className="flex items-center space-x-2 px-4 py-2">
-            <span>🙏</span>
-            <span>{prayCount}</span>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
