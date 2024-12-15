@@ -26,41 +26,49 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <div className="mr-4 flex">
-          <Link className="mr-6 flex items-center space-x-2" href="/">
-            <span className="hidden font-bold sm:inline-block">
-              Plataforma de Oração
+      <div className="w-full flex justify-center px-4 py-3">
+        <div className="w-full max-w-5xl flex items-center justify-between">
+          <Link 
+            href="/" 
+            className="text-2xl md:text-4xl font-bold text-gray-800 group relative hover:opacity-80 transition-opacity"
+          >
+            <span>Oratio 🙏🏻</span>
+            <span className="absolute -bottom-4 left-0 text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+              orando uns pelos outros
             </span>
           </Link>
-        </div>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <nav className="flex items-center">
+
+          <div className="flex items-center gap-2 md:gap-4">
             {user ? (
-              <div className="flex items-center gap-4">
+              <>
                 {user.user_metadata?.avatar_url && (
                   <Image
                     src={user.user_metadata.avatar_url}
                     alt="Avatar do usuário"
                     width={32}
                     height={32}
-                    className="rounded-full"
+                    className="rounded-full hidden sm:block"
                   />
                 )}
-                <span className="text-sm">Olá, {user.user_metadata?.name || 'Usuário'}</span>
+                <span className="text-sm text-gray-600 hidden sm:block">
+                  Olá, {user.user_metadata?.name || 'Usuário'}
+                </span>
                 <Button
                   variant="ghost"
                   onClick={() => signOut()}
+                  className="text-sm"
+                  size="sm"
                 >
                   Sair
                 </Button>
-              </div>
+              </>
             ) : (
               <Button
                 onClick={handleLogin}
                 className="flex items-center gap-2"
+                size="sm"
               >
-                <svg viewBox="0 0 24 24" className="h-5 w-5">
+                <svg viewBox="0 0 24 24" className="h-5 w-5 hidden sm:block">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     fill="#4285F4"
@@ -79,10 +87,11 @@ export default function Header() {
                   />
                   <path d="M1 1h22v22H1z" fill="none" />
                 </svg>
-                Entrar com Google
+                <span className="sm:block">Entrar</span>
+                <span className="hidden sm:inline">com Google</span>
               </Button>
             )}
-          </nav>
+          </div>
         </div>
       </div>
     </header>

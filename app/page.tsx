@@ -6,6 +6,7 @@ import { PrayerWithAuthorAndComments } from '@/types/supabase'
 import PrayerList from './components/PrayerList'
 import NewPrayerForm from './components/NewPrayerForm'
 import Pagination from './components/Pagination'
+import WelcomeMessage from './components/WelcomeMessage'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 
 const ITEMS_PER_PAGE = 10
@@ -13,7 +14,7 @@ const ITEMS_PER_PAGE = 10
 export const revalidate = 0 // desabilita o cache da página
 
 export default function Home() {
-  const { user } = useSupabaseAuth()
+  const { user, session } = useSupabaseAuth()
   const [prayers, setPrayers] = useState<PrayerWithAuthorAndComments[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
@@ -69,6 +70,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto space-y-8">
+          {!session && <WelcomeMessage />}
           {user && (
             <Suspense fallback={<div>Carregando formulário...</div>}>
               <NewPrayerForm />
