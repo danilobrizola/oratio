@@ -5,9 +5,10 @@
       "dom.iterable",
       "esnext"
     ],
+    "skipLibCheck": true,          // Ignora verificações de tipos em arquivos de declaração (d.ts)
+    "strict": false,               // Desativa o modo estrito
+    "noEmitOnError": false,        // Permite que o build prossiga mesmo com erros de tipo
     "allowJs": true,
-    "skipLibCheck": true,
-    "strict": false,
     "noEmit": true,
     "incremental": true,
     "esModuleInterop": true,
