@@ -30,7 +30,7 @@ interface Prayer {
   is_anonymous: boolean
   prayer_count: number
   comments: Comment[]
-  answered: boolean
+  status: string | null
 }
 
 interface PrayerItemProps {
