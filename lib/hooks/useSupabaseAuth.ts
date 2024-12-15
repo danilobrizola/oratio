@@ -1,38 +1,42 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient, User } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { User } from '@supabase/supabase-js'
+import { useSupabaseClient } from './useSupabaseClient'
+import { useToast } from '@/components/ui/use-toast'
 
 export function useSupabaseAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const supabase = useSupabaseClient()
+  const { toast } = useToast()
 
   const syncUser = async (user: User) => {
     try {
-      // Usar exatamente o mesmo UUID do Supabase Auth
-      const { error: upsertError } = await supabase
-        .from('users')
-        .upsert({
-          id: user.id, // Este é o auth.uid()
-          email: user.email,
-          name: user.user_metadata?.full_name || user.email?.split('@')[0],
-          image: user.user_metadata?.avatar_url
-        })
+      const response = await fetch('/api/user/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(user),
+      })
 
-      if (upsertError) {
-        console.error('Erro ao sincronizar usuário:', upsertError)
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message)
       }
     } catch (error: any) {
-      console.error('Erro ao sincronizar usuário:', error.message)
+      console.error('Erro ao sincronizar usuário:', error)
+      toast({
+        title: "Erro ao sincronizar dados",
+        description: "Por favor, tente novamente mais tarde.",
+        variant: "destructive",
+      })
     }
   }
 
   useEffect(() => {
+    // Verificar sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
@@ -43,6 +47,7 @@ export function useSupabaseAuth() {
       setLoading(false)
     })
 
+    // Escutar mudanças na autenticação
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -56,11 +61,21 @@ export function useSupabaseAuth() {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [supabase])
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) return
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      setUser(null)
+    } catch (error: any) {
+      console.error('Erro ao fazer logout:', error)
+      toast({
+        title: "Erro ao fazer logout",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
   }
 
   return {

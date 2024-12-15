@@ -159,27 +159,23 @@ export default function PrayerPage() {
     if (!user || !prayer || !newComment.trim()) return
 
     try {
-      const { data: comment, error } = await supabase
-        .from('comments')
-        .insert([
-          {
-            prayer_id: prayer.id,
-            author_id: user.id,
-            content: newComment.trim(),
-          },
-        ])
-        .select(`
-          id,
-          content,
-          created_at,
-          author:users!author_id (
-            name,
-            image
-          )
-        `)
-        .single()
+      const response = await fetch('/api/comments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prayer_id: prayer.id,
+          content: newComment.trim()
+        })
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message)
+      }
+
+      const comment = await response.json()
 
       setPrayer(prev => prev ? {
         ...prev,

@@ -1,4 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -15,57 +15,100 @@ const supabaseAdmin = createClient(
   }
 )
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      }
+    )
 
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
       return NextResponse.json(
         { error: 'Usuário não autenticado' },
         { status: 401 }
       )
     }
 
-    // Excluir comentários
-    const { error: commentsError } = await supabase
-      .from('comments')
-      .delete()
-      .eq('author_id', user.id)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Usuário não encontrado' },
+        { status: 404 }
+      )
+    }
 
-    if (commentsError) throw commentsError
+    // 1. Primeiro excluímos todos os dados relacionados ao usuário usando o cliente admin
+    try {
+      // Excluir comentários
+      await supabaseAdmin
+        .from('comments')
+        .delete()
+        .eq('author_id', user.id)
 
-    // Excluir prayer_counts
-    const { error: countsError } = await supabase
-      .from('prayer_counts')
-      .delete()
-      .eq('user_id', user.id)
+      // Excluir prayer_counts
+      await supabaseAdmin
+        .from('prayer_counts')
+        .delete()
+        .eq('user_id', user.id)
 
-    if (countsError) throw countsError
+      // Excluir orações
+      await supabaseAdmin
+        .from('prayers')
+        .delete()
+        .eq('author_id', user.id)
 
-    // Excluir orações
-    const { error: prayersError } = await supabase
-      .from('prayers')
-      .delete()
-      .eq('author_id', user.id)
+      // Excluir usuário da tabela users
+      await supabaseAdmin
+        .from('users')
+        .delete()
+        .eq('id', user.id)
 
-    if (prayersError) throw prayersError
+      // 2. Por último, excluímos a autenticação
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
+      if (authError) throw authError
 
-    // Excluir usuário da tabela users
-    const { error: userError } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', user.id)
+      // 3. Limpar os cookies
+      cookieStore.set({ 
+        name: 'sb-access-token', 
+        value: '', 
+        maxAge: 0,
+        path: '/' 
+      })
+      cookieStore.set({ 
+        name: 'sb-refresh-token', 
+        value: '', 
+        maxAge: 0,
+        path: '/' 
+      })
 
-    if (userError) throw userError
+      return NextResponse.json({ success: true })
+    } catch (error: any) {
+      console.error('Erro durante a exclusão:', error)
+      
+      // Se falhou em algum ponto, tentamos reverter a autenticação
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(user.id)
+      } catch (authError) {
+        console.error('Erro ao excluir autenticação:', authError)
+      }
 
-    // Excluir a conta do Supabase Auth usando o cliente admin
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
-
-    if (authError) throw authError
-
-    return NextResponse.json({ success: true })
+      throw error
+    }
   } catch (error: any) {
     console.error('Erro ao excluir usuário:', error)
     return NextResponse.json(

@@ -157,6 +157,7 @@ export default function Profile() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include'
       })
 
       if (!response.ok) {
@@ -164,14 +165,18 @@ export default function Profile() {
         throw new Error(data.error || 'Erro ao excluir conta')
       }
 
-      // Fazer logout
-      await signOut()
-
+      // Redirecionar primeiro, depois fazer logout
+      router.push('/')
+      
       toast({
         title: "Conta excluída",
         description: "Sua conta e todos os dados foram excluídos com sucesso.",
       })
+
+      // Fazer logout por último
+      await signOut()
     } catch (error: any) {
+      console.error('Erro ao excluir conta:', error)
       toast({
         title: "Erro ao excluir conta",
         description: error.message,
@@ -200,8 +205,9 @@ export default function Profile() {
           <Button
             variant="destructive"
             onClick={() => setDeleteAccountDialogOpen(true)}
-            className="bg-red-600 hover:bg-red-700"
+            className="gap-2"
           >
+            <Trash2 className="h-4 w-4" />
             Excluir minha conta
           </Button>
         </div>
@@ -351,32 +357,22 @@ export default function Profile() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Excluir conta</DialogTitle>
-            <DialogDescription className="pt-4">
-              <p className="mb-4">
-                Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita e todos os seus dados serão permanentemente excluídos:
-              </p>
-              <ul className="list-disc list-inside space-y-2 text-sm">
-                <li>Todas as suas orações</li>
-                <li>Todos os seus comentários</li>
-                <li>Todos os registros de orações feitas</li>
-                <li>Suas informações de perfil</li>
-              </ul>
-              <div className="mt-4">
-                <p className="text-sm text-red-600 mb-2">
-                  Para confirmar, digite DELETAR em letras maiúsculas:
-                </p>
-                <Input
-                  type="text"
-                  placeholder="Digite DELETAR"
-                  value={deleteConfirmation}
-                  onChange={(e) => setDeleteConfirmation(e.target.value)}
-                />
-              </div>
+            <DialogDescription>
+              Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.
+              <br /><br />
+              Digite <strong>DELETAR</strong> para confirmar a exclusão da sua conta.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Digite DELETAR"
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+            />
+          </div>
           <DialogFooter>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => {
                 setDeleteAccountDialogOpen(false)
                 setDeleteConfirmation('')
@@ -386,10 +382,10 @@ export default function Profile() {
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDeleteAccount}
               disabled={deleteConfirmation !== 'DELETAR' || deleteLoading}
+              onClick={handleDeleteAccount}
             >
-              {deleteLoading ? 'Excluindo...' : 'Confirmar exclusão'}
+              {deleteLoading ? 'Excluindo...' : 'Excluir conta'}
             </Button>
           </DialogFooter>
         </DialogContent>
