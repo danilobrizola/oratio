@@ -41,17 +41,22 @@ export default function Header() {
             {user ? (
               <>
                 {user.user_metadata?.avatar_url && (
-                  <Image
-                    src={user.user_metadata.avatar_url}
-                    alt="Avatar do usuário"
-                    width={32}
-                    height={32}
-                    className="rounded-full hidden sm:block"
-                  />
+                  <Link href="/profile">
+                    <Image
+                      src={user.user_metadata.avatar_url}
+                      alt="Avatar do usuário"
+                      width={32}
+                      height={32}
+                      className="rounded-full hidden sm:block hover:opacity-80 transition-opacity"
+                    />
+                  </Link>
                 )}
-                <span className="text-sm text-gray-600 hidden sm:block">
-                  Olá, {user.user_metadata?.name || 'Usuário'}
-                </span>
+                <Link 
+                  href="/profile" 
+                  className="text-sm text-gray-600 hidden sm:block hover:text-gray-900 transition-colors"
+                >
+                  Olá, {user.user_metadata?.full_name || 'Usuário'}
+                </Link>
                 <Button
                   variant="ghost"
                   onClick={() => signOut()}

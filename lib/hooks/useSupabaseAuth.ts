@@ -12,32 +12,27 @@ export function useSupabaseAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Função para sincronizar o usuário com a tabela users
   const syncUser = async (user: User) => {
-    const { data: existingUser, error: selectError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', user.id)
-      .single()
-
-    if (!existingUser) {
-      const { error: insertError } = await supabase
+    try {
+      // Usar exatamente o mesmo UUID do Supabase Auth
+      const { error: upsertError } = await supabase
         .from('users')
         .upsert({
-          id: user.id,
+          id: user.id, // Este é o auth.uid()
           email: user.email,
           name: user.user_metadata?.full_name || user.email?.split('@')[0],
           image: user.user_metadata?.avatar_url
         })
 
-      if (insertError) {
-        return
+      if (upsertError) {
+        console.error('Erro ao sincronizar usuário:', upsertError)
       }
+    } catch (error: any) {
+      console.error('Erro ao sincronizar usuário:', error.message)
     }
   }
 
   useEffect(() => {
-    // Verificar sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
@@ -48,7 +43,6 @@ export function useSupabaseAuth() {
       setLoading(false)
     })
 
-    // Escutar mudanças na autenticação
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
