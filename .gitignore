@@ -1,3 +1,5 @@
 node_modules
-node_modules
 .env.local
+.env
+.next
+.DS_Store
