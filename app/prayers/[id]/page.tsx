@@ -17,6 +17,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import PrayButton from '../../components/PrayButton'
+import { formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export default function PrayerPage() {
   const params = useParams()
@@ -196,9 +198,9 @@ export default function PrayerPage() {
   }
 
   useEffect(() => {
-    async function fetchPrayer() {
+    const fetchPrayer = async () => {
       try {
-        const { data: prayerData, error: prayerError } = await supabase
+        const { data: prayer, error } = await supabase
           .from('prayers')
           .select(`
             *,
@@ -221,32 +223,30 @@ export default function PrayerPage() {
           .eq('id', params.id)
           .single()
 
-        if (prayerError) throw prayerError
+        if (error) throw error
 
-        setPrayer(prayerData)
-
-        // Verificar se o usuário já orou
-        if (user) {
-          const { data: prayerCount, error: countError } = await supabase
-            .from('prayer_counts')
-            .select('id')
-            .eq('prayer_id', params.id)
-            .eq('user_id', user.id)
-            .maybeSingle()
-
-          if (!countError && prayerCount) {
-            setHasPrayed(true)
-          }
+        // Ordenar comentários do mais recente para o mais antigo
+        if (prayer.comments) {
+          prayer.comments.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )
         }
+
+        setPrayer(prayer)
+      } catch (error: any) {
+        console.error('Error fetching prayer:', error)
+        toast({
+          title: "Erro ao carregar oração",
+          description: error.message,
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
     }
 
-    if (params.id) {
-      fetchPrayer()
-    }
-  }, [params.id, user])
+    fetchPrayer()
+  }, [params.id, supabase, toast])
 
   if (loading) {
     return (
@@ -267,193 +267,161 @@ export default function PrayerPage() {
   return (
     <div className="min-h-screen container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        {prayer.status === 'answered' && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center text-green-700 font-medium mb-2">
-              <span className="mr-2">✨</span>
-              Esta oração foi respondida!
-            </div>
-            <p className="text-green-600 text-sm">
-              O autor poderá compartilhar nos comentários como Deus respondeu esta oração. 
-              Você ainda pode orar e comentar neste pedido para fortalecer nossa comunidade em oração.
-            </p>
-          </div>
-        )}
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
-          {/* Cabeçalho */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              {prayer.is_anonymous ? (
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                  <span className="text-gray-500 text-sm">A</span>
-                </div>
-              ) : prayer.author?.image ? (
-                <div className="relative w-10 h-10 flex-shrink-0">
-                  <Image
-                    src={prayer.author.image}
-                    alt={prayer.author.name}
-                    fill
-                    className="rounded-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                  <span className="text-gray-500 text-sm">
-                    {prayer.author.name.charAt(0)}
-                  </span>
-                </div>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold">{prayer.title}</h1>
-                <p className="text-sm text-gray-500">
-                  por {prayer.is_anonymous ? 'Anônimo' : prayer.author?.name} • {' '}
-                  {new Date(prayer.created_at).toLocaleDateString('pt-BR')}
-                </p>
-              </div>
-            </div>
-            {prayer.status === 'answered' && (
-              <div className="flex items-center gap-2">
-                <span className="text-green-600 font-medium">✓ Respondida</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDialogOpen(true)}
-                >
-                  Ver testemunho
-                </Button>
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center gap-4 mb-6">
+            {!prayer.is_anonymous && prayer.author.image ? (
+              <Image
+                src={prayer.author.image}
+                alt={prayer.author.name}
+                width={48}
+                height={48}
+                className="rounded-full"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                <span className="text-gray-500 text-lg">
+                  {prayer.is_anonymous ? 'A' : prayer.author.name.charAt(0)}
+                </span>
               </div>
             )}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{prayer.title}</h1>
+              <p className="text-gray-600">
+                Por {prayer.is_anonymous ? 'Anônimo' : prayer.author.name} • {' '}
+                {formatDistanceToNow(new Date(prayer.created_at), {
+                  addSuffix: true,
+                  locale: ptBR
+                })}
+              </p>
+            </div>
           </div>
 
-          {/* Conteúdo */}
-          <p className="text-gray-700 whitespace-pre-wrap">{prayer.content}</p>
+          <p className="text-gray-700 mb-6 whitespace-pre-wrap">{prayer.content}</p>
 
-          {/* Ações */}
-          <div className="flex items-center gap-4 pt-4 border-t">
-            {user && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <PrayButton
                 prayerId={prayer.id}
                 initialPrayerCount={prayer.prayer_count}
-                onPrayerCountChange={(newCount) => 
-                  setPrayer(prev => prev ? { ...prev, prayer_count: newCount } : null)
-                }
+                onPrayerCountChange={(newCount) => {
+                  setPrayer(prev => prev ? {
+                    ...prev,
+                    prayer_count: newCount
+                  } : null)
+                }}
                 onShowLastPrayers={async () => {
                   await fetchLastPrayers()
                   setShowPrayersModal(true)
                 }}
               />
-            )}
-            {!user && prayer.prayer_count > 0 && (
-              <div className="flex items-center space-x-2 px-4 py-2">
-                <span>🙏</span>
-                <span>{prayer.prayer_count}</span>
+            </div>
+            {prayer.status === 'answered' && (
+              <div className="flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800">
+                ✓ Oração respondida
               </div>
             )}
           </div>
 
-          {/* Seção de comentários */}
-          <div className="space-y-6 pt-6 border-t">
-            <h2 className="text-lg font-semibold">Comentários</h2>
-            
-            {user && (
-              <div className="space-y-2">
-                <Textarea
-                  placeholder="Compartilhe uma palavra de encorajamento..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  className="min-h-[100px]"
-                />
-                <Button onClick={handleComment} disabled={!newComment.trim()}>
-                  Comentar
-                </Button>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {prayer.comments?.map((comment) => (
-                <div key={comment.id} className="flex gap-3 p-4 bg-gray-50 rounded-lg">
-                  {comment.author?.image ? (
-                    <div className="relative w-8 h-8 flex-shrink-0">
-                      <Image
-                        src={comment.author.image}
-                        alt={`Foto de ${comment.author.name}`}
-                        fill
-                        className="rounded-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-gray-500 text-sm">
-                        {comment.author.name === 'Anônimo' ? 'A' : comment.author.name.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                  <div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-medium">{comment.author?.name}</span>
-                      <span className="text-sm text-gray-500">
-                        {new Date(comment.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 mt-1">{comment.content}</p>
-                  </div>
-                </div>
-              ))}
-
-              {prayer.comments?.length === 0 && (
-                <p className="text-center text-gray-500 py-4">
-                  Nenhum comentário ainda. Seja o primeiro a comentar!
-                </p>
-              )}
+          {prayer.status === 'answered' && prayer.status_message && (
+            <div className="mt-6 p-4 bg-green-50 rounded-lg">
+              <h3 className="text-lg font-semibold text-green-800 mb-2">Testemunho</h3>
+              <p className="text-green-700 whitespace-pre-wrap">{prayer.status_message}</p>
             </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-6">Comentários</h2>
+
+          {user ? (
+            <div className="mb-8">
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Deixe seu comentário..."
+                className="mb-4"
+              />
+              <Button 
+                onClick={handleComment}
+                disabled={!newComment.trim()}
+              >
+                Comentar
+              </Button>
+            </div>
+          ) : (
+            <div className="mb-8 p-4 bg-gray-50 rounded-lg text-center">
+              <p className="text-gray-600">
+                Faça login para deixar um comentário
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {prayer.comments.map((comment) => (
+              <div key={comment.id} className="flex gap-4">
+                {comment.author?.image ? (
+                  <div className="relative w-10 h-10 flex-shrink-0">
+                    <Image
+                      src={comment.author.image}
+                      alt={comment.author.name}
+                      fill
+                      className="rounded-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-gray-500">
+                      {comment.author.name.charAt(0)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="font-medium text-gray-900">
+                      {comment.author.name}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {formatDistanceToNow(new Date(comment.created_at), {
+                        addSuffix: true,
+                        locale: ptBR
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-gray-700">{comment.content}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Dialog do testemunho */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={showPrayersModal} onOpenChange={setShowPrayersModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Testemunho da Oração</DialogTitle>
-            <DialogDescription className="pt-4">
-              {prayer.status_message || 
-                "Uma oração respondida é aquela também que muitas vezes nosso Deus não fala. " +
-                "O silêncio ou o acontecimento de algo que era diferente daquilo que esperávamos também é uma resposta. " +
-                "Saiba que Ele conhece todas as coisas e a vontade dEle é boa perfeita e agradável."
-              }
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog de últimas orações */}
-      <Dialog open={showPrayersModal} onOpenChange={setShowPrayersModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Pessoas que oraram por este pedido</DialogTitle>
+            <DialogTitle>Últimas pessoas que oraram</DialogTitle>
             <DialogDescription>
-              As últimas pessoas que se juntaram em oração
+              Estas são as últimas pessoas que intercederam por este pedido
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {lastPrayers.map((user) => (
-              <div key={user.id} className="flex items-center gap-3">
-                {user.image ? (
+          <div className="space-y-4">
+            {lastPrayers.map((prayer) => (
+              <div key={prayer.id} className="flex items-center gap-3">
+                {prayer.image ? (
                   <Image
-                    src={user.image}
-                    alt={user.full_name}
-                    width={40}
-                    height={40}
+                    src={prayer.image}
+                    alt={prayer.full_name}
+                    width={32}
+                    height={32}
                     className="rounded-full"
                   />
                 ) : (
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                     <span className="text-gray-500 text-sm">
-                      {user.full_name.charAt(0)}
+                      {prayer.full_name.charAt(0)}
                     </span>
                   </div>
                 )}
-                <span className="text-sm font-medium">{user.full_name}</span>
+                <span className="font-medium">{prayer.full_name}</span>
               </div>
             ))}
           </div>

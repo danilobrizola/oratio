@@ -112,8 +112,14 @@ export default function NewPrayerForm() {
       setTitle('')
       setContent('')
       setIsAnonymous(false)
-      router.refresh()
+
+      // Primeiro redireciona
       router.push('/')
+
+      // Depois recarrega a página
+      setTimeout(() => {
+        window.location.reload()
+      }, 100)
       
     } catch (error: any) {
       setError(error.message)

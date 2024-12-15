@@ -67,6 +67,81 @@ export default function PrayerList({ prayers }: PrayerListProps) {
     }
   }
 
+  const handleCreatePrayer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) {
+      // toast({
+      //   title: "Faça login para criar uma oração",
+      //   description: "É necessário fazer login para criar pedidos de oração.",
+      //   variant: "destructive",
+      // })
+      return
+    }
+
+    // if (!title.trim() || !content.trim()) {
+    //   toast({
+    //     title: "Campos obrigatórios",
+    //     description: "Por favor, preencha todos os campos.",
+    //     variant: "destructive",
+    //   })
+    //   return
+    // }
+
+    try {
+      const { data: prayer, error } = await supabase
+        .from('prayers')
+        .insert([
+          {
+            // title: title.trim(),
+            // content: content.trim(),
+            author_id: user.id,
+            // is_anonymous: isAnonymous,
+          },
+        ])
+        .select(`
+          *,
+          author:users!author_id (
+            id,
+            name,
+            email,
+            image
+          ),
+          comments (
+            id,
+            content,
+            created_at,
+            author:users!author_id (
+              name,
+              image
+            )
+          )
+        `)
+        .single()
+
+      if (error) throw error
+
+      // setPrayers(prev => [prayer, ...prev])
+      // setTitle('')
+      // setContent('')
+      // setIsAnonymous(false)
+      // setDialogOpen(false)
+      // toast({
+      //   title: "Oração criada",
+      //   description: "Seu pedido de oração foi criado com sucesso!",
+      // })
+
+      // Recarregar a página após criar a oração
+      window.location.reload()
+    } catch (error: any) {
+      console.error('Error creating prayer:', error)
+      // toast({
+      //   title: "Erro ao criar oração",
+      //   description: error.message,
+      //   variant: "destructive",
+      // })
+    }
+  }
+
   if (visiblePrayers.length === 0) {
     return (
       <div className="min-h-[400px] flex flex-col items-center justify-center text-center p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
