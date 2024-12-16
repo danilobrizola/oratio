@@ -17,18 +17,18 @@ import {
 } from "@/components/ui/dialog"
 
 interface PrayerListProps {
-  prayers: PrayerWithAuthorAndComments[]
+  prayers: any[]
 }
 
 interface LastPrayer {
-  id: string
-  full_name: string
-  image: string | null
+  id: any
+  full_name: any
+  image: any
 }
 
 export default function PrayerList({ prayers }: PrayerListProps) {
   const [showPrayersModal, setShowPrayersModal] = useState(false)
-  const [lastPrayers, setLastPrayers] = useState<LastPrayer[]>([])
+  const [lastPrayers, setLastPrayers] = useState<any[]>([])
   const [currentPrayerId, setCurrentPrayerId] = useState<string | null>(null)
   const { user, supabase } = useSupabaseAuth()
 

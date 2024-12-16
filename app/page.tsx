@@ -15,7 +15,7 @@ export const revalidate = 0 // desabilita o cache da página
 
 export default function Home() {
   const { user } = useSupabaseAuth()
-  const [prayers, setPrayers] = useState<PrayerWithAuthorAndComments[]>([])
+  const [prayers, setPrayers] = useState<any[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)

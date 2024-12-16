@@ -23,13 +23,13 @@ import { useRouter } from 'next/navigation'
 export default function Profile() {
   const router = useRouter()
   const { user, signOut, supabase } = useSupabaseAuth()
-  const [prayers, setPrayers] = useState<PrayerWithAuthorAndComments[]>([])
+  const [prayers, setPrayers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
-  const [selectedPrayer, setSelectedPrayer] = useState<PrayerWithAuthorAndComments | null>(null)
+  const [selectedPrayer, setSelectedPrayer] = useState<any>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [prayerToDelete, setPrayerToDelete] = useState<PrayerWithAuthorAndComments | null>(null)
+  const [prayerToDelete, setPrayerToDelete] = useState<any>(null)
   const [testimony, setTestimony] = useState('')
   const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
@@ -83,7 +83,7 @@ export default function Profile() {
     fetchUserPrayers()
   }, [user, supabase, toast])
 
-  const handleMarkAsAnswered = async (prayer: PrayerWithAuthorAndComments) => {
+  const handleMarkAsAnswered = async (prayer: any) => {
     try {
       const { error } = await supabase
         .from('prayers')
@@ -119,7 +119,7 @@ export default function Profile() {
     }
   }
 
-  const handleHidePrayer = async (prayer: PrayerWithAuthorAndComments) => {
+  const handleHidePrayer = async (prayer: any) => {
     try {
       const { error } = await supabase
         .from('prayers')
