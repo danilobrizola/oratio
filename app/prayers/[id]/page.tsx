@@ -31,7 +31,7 @@ export default function PrayerPage() {
   const params = useParams()
   const { user } = useSupabaseAuth()
   const { toast } = useToast()
-  const [prayer, setPrayer] = useState<PrayerWithAuthorAndComments | null>(null)
+  const [prayer, setPrayer] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [newComment, setNewComment] = useState('')
   const [editingComment, setEditingComment] = useState<{ id: string, content: string } | null>(null)
@@ -320,18 +320,18 @@ export default function PrayerPage() {
         .from('prayers')
         .select(`
           *,
-          author:users!prayers_author_id_fkey (
+          author:author_id (
             id,
             name,
+            email,
             image
           ),
-          comments:comments (
+          comments (
             id,
             content,
-            created_at,
             author_id,
-            author:users!comments_author_id_fkey (
-              id,
+            created_at,
+            author:author_id (
               name,
               image
             )
