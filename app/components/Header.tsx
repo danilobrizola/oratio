@@ -27,15 +27,26 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="w-full flex justify-center px-4 py-3">
         <div className="w-full max-w-5xl flex items-center justify-between">
-          <Link 
-            href="/" 
-            className="text-2xl md:text-4xl font-bold text-gray-800 group relative hover:opacity-80 transition-opacity"
-          >
-            <span>Oratio 🙏🏻</span>
-            <span className="absolute -bottom-4 left-0 text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-              orando uns pelos outros
-            </span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 relative">
+              <Image
+                src="/placeholder-partner.png"
+                alt="Logo do Parceiro"
+                width={40}
+                height={40}
+                className="rounded-lg"
+              />
+            </div>
+            <Link 
+              href="/" 
+              className="text-2xl md:text-4xl font-bold text-gray-800 group relative hover:opacity-80 transition-opacity"
+            >
+              <span>Oratio 🙏🏻</span>
+              <span className="absolute -bottom-4 left-0 text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                orando uns pelos outros
+              </span>
+            </Link>
+          </div>
 
           <div className="flex items-center gap-2 md:gap-4">
             {user ? (
