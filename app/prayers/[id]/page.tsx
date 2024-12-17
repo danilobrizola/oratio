@@ -205,45 +205,47 @@ export default function PrayerPage() {
   }
 
   const handleEditComment = async (commentId: string, content: string) => {
+    console.log('=== INICIANDO EDIÇÃO DE COMENTÁRIO ===')
     try {
       if (!user) {
+        console.log('Usuário não está logado')
         throw new Error('Você precisa estar logado para editar um comentário')
       }
 
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-
-      if (!token) {
-        throw new Error('Erro de autenticação. Por favor, faça login novamente.')
-      }
-
+      console.log('Enviando requisição de edição...')
       const response = await fetch('/api/comments/edit', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           commentId,
-          content,
-        }),
+          content
+        })
+      })
+
+      console.log('Resposta recebida:', {
+        status: response.status,
+        ok: response.ok
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || 'Falha ao editar comentário')
+        const error = await response.json()
+        console.log('Erro na resposta:', error)
+        throw new Error(error.error || 'Falha ao editar comentário')
       }
 
-      // Recarregar os comentários
+      console.log('Recarregando dados da oração...')
       await fetchPrayer()
       setEditingComment(null)
       
+      console.log('=== EDIÇÃO CONCLUÍDA COM SUCESSO ===')
       toast({
         title: "Comentário editado",
         description: "O comentário foi atualizado com sucesso!",
       })
     } catch (error: any) {
-      console.error('Error editing comment:', error)
+      console.error('=== ERRO NA EDIÇÃO ===', error)
       toast({
         title: "Erro ao editar comentário",
         description: error.message,
@@ -253,44 +255,46 @@ export default function PrayerPage() {
   }
 
   const handleDeleteComment = async (commentId: string) => {
+    console.log('=== INICIANDO DELEÇÃO DE COMENTÁRIO ===')
     try {
       if (!user) {
+        console.log('Usuário não está logado')
         throw new Error('Você precisa estar logado para deletar um comentário')
       }
 
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-
-      if (!token) {
-        throw new Error('Erro de autenticação. Por favor, faça login novamente.')
-      }
-
+      console.log('Enviando requisição de deleção...')
       const response = await fetch('/api/comments/delete', {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           commentId,
           prayerId: params.id,
-        }),
+        })
+      })
+
+      console.log('Resposta recebida:', {
+        status: response.status,
+        ok: response.ok
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || 'Falha ao deletar comentário')
+        const error = await response.json()
+        console.log('Erro na resposta:', error)
+        throw new Error(error.error || 'Falha ao deletar comentário')
       }
 
-      // Recarregar os comentários
+      console.log('Recarregando dados da oração...')
       await fetchPrayer()
       
+      console.log('=== DELEÇÃO CONCLUÍDA COM SUCESSO ===')
       toast({
         title: "Comentário deletado",
         description: "O comentário foi removido com sucesso!",
       })
     } catch (error: any) {
-      console.error('Error deleting comment:', error)
+      console.error('=== ERRO NA DELEÇÃO ===', error)
       toast({
         title: "Erro ao deletar comentário",
         description: error.message,

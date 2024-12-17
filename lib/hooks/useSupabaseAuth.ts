@@ -36,32 +36,53 @@ export function useSupabaseAuth() {
   }
 
   useEffect(() => {
+    let mounted = true
+
     // Verificar sessão inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        syncUser(session.user)
-      } else {
-        setUser(null)
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) throw error
+        
+        if (mounted) {
+          if (session?.user) {
+            setUser(session.user)
+            await syncUser(session.user)
+          } else {
+            setUser(null)
+          }
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error)
+        if (mounted) {
+          setUser(null)
+          setLoading(false)
+        }
       }
-      setLoading(false)
-    })
+    }
+
+    checkSession()
 
     // Escutar mudanças na autenticação
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user)
-        syncUser(session.user)
-      } else {
-        setUser(null)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (mounted) {
+        if (session?.user) {
+          setUser(session.user)
+          await syncUser(session.user)
+        } else {
+          setUser(null)
+        }
+        setLoading(false)
       }
-      setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
-  }, [supabase])
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [supabase, toast])
 
   const signOut = async () => {
     try {
@@ -78,10 +99,5 @@ export function useSupabaseAuth() {
     }
   }
 
-  return {
-    user,
-    loading,
-    signOut,
-    supabase
-  }
+  return { user, loading, signOut, supabase }
 }

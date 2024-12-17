@@ -1,68 +1,122 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+// Cliente admin do Supabase com a service role key
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 export async function DELETE(request: Request) {
+  console.log('=== INÍCIO DA REQUISIÇÃO DE DELEÇÃO ===')
   try {
-    const { commentId, prayerId } = await request.json()
-    const authHeader = request.headers.get('Authorization')
-    
-    console.log('Auth Header:', authHeader) // Debug
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new NextResponse('Token de autorização ausente ou inválido', { status: 401 })
-    }
-
-    const token = authHeader.split(' ')[1]
-    console.log('Token:', token) // Debug
-
-    // Cliente admin para operações no banco
-    const supabaseAdmin = createClient(
+    const cookieStore = cookies()
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      }
     )
 
-    // Verificar o token do usuário
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    console.log('User:', user, 'Auth Error:', authError) // Debug
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    console.log('Sessão:', {
+      hasSession: !!session,
+      sessionError: sessionError?.message
+    })
 
-    if (authError || !user) {
-      return new NextResponse('Usuário não autorizado', { status: 401 })
+    if (sessionError || !session) {
+      console.log('Usuário não autenticado')
+      return NextResponse.json(
+        { error: 'Usuário não autenticado' },
+        { status: 401 }
+      )
     }
 
+    const { commentId, prayerId } = await request.json()
+    console.log('Dados recebidos:', { commentId, prayerId })
+
     // Verificar se o usuário é o autor do comentário ou da oração
-    const { data: comment } = await supabaseAdmin
+    const { data: comment, error: commentError } = await supabaseAdmin
       .from('comments')
       .select('author_id, prayer:prayers(author_id)')
       .eq('id', commentId)
       .single()
 
-    console.log('Comment:', comment) // Debug
+    console.log('Dados do comentário:', { 
+      comment,
+      commentError: commentError?.message
+    })
 
     if (!comment) {
-      return new NextResponse('Comentário não encontrado', { status: 404 })
+      console.log('Comentário não encontrado')
+      return NextResponse.json(
+        { error: 'Comentário não encontrado' },
+        { status: 404 }
+      )
     }
 
     // Usuário pode deletar se for autor do comentário ou da oração
     const canDelete = 
-      comment.author_id === user.id || 
-      (comment.prayer as any).author_id === user.id
+      comment.author_id === session.user.id || 
+      (comment.prayer as any).author_id === session.user.id
+
+    console.log('Verificação de permissão:', {
+      commentAuthorId: comment.author_id,
+      prayerAuthorId: (comment.prayer as any).author_id,
+      sessionUserId: session.user.id,
+      canDelete
+    })
 
     if (!canDelete) {
-      return new NextResponse('Você não tem permissão para deletar este comentário', { status: 401 })
+      console.log('Usuário não tem permissão para deletar')
+      return NextResponse.json(
+        { error: 'Você não tem permissão para deletar este comentário' },
+        { status: 401 }
+      )
     }
 
-    const { error } = await supabaseAdmin
+    const { error: deleteError } = await supabaseAdmin
       .from('comments')
       .delete()
       .eq('id', commentId)
 
-    if (error) throw error
+    console.log('Resultado da deleção:', {
+      error: deleteError?.message
+    })
 
+    if (deleteError) {
+      console.log('Erro ao deletar comentário:', deleteError)
+      return NextResponse.json(
+        { error: 'Erro ao deletar comentário' },
+        { status: 500 }
+      )
+    }
+
+    console.log('=== DELEÇÃO CONCLUÍDA COM SUCESSO ===')
     return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error deleting comment:', error)
-    return new NextResponse(
-      error instanceof Error ? error.message : 'Erro interno do servidor', 
+  } catch (error: any) {
+    console.error('=== ERRO NA DELEÇÃO ===', error)
+    return NextResponse.json(
+      { error: error.message || 'Erro interno do servidor' },
       { status: 500 }
     )
   }
